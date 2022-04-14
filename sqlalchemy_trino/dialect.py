@@ -6,6 +6,7 @@ from sqlalchemy import exc, sql
 from sqlalchemy.engine.base import Connection
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
 from sqlalchemy.engine.url import URL
+from sqlalchemy.engine import reflection, Engine
 from trino.auth import BasicAuthentication
 from trino.client import TrinoQuery
 from trino.dbapi import Cursor
@@ -266,14 +267,20 @@ class TrinoDialect(DefaultDialect):
         return False
 
     def _get_server_version_info(self, connection: Connection) -> Tuple[int, ...]:
+        return tuple([367])
         query = 'SELECT version()'
         res = connection.execute(sql.text(query)).scalar()
         match = self.__version_pattern.match(res)
         version = int(match.group(1)) if match else 0
         return tuple([version])
 
+    def _raw_connection(self, connection):
+        if isinstance(connection, Engine):
+            return connection.raw_connection()
+        return connection.connection
+
     def _get_default_schema_name(self, connection: Connection) -> Optional[str]:
-        dbapi_connection: trino_dbapi.Connection = connection.connection
+        dbapi_connection: trino_dbapi.Connection = self._raw_connection(connection)
         return dbapi_connection.schema
 
     def do_execute(self, cursor: Cursor, statement: str, parameters: Tuple[Any, ...],
