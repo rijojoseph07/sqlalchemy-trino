@@ -250,8 +250,10 @@ class TrinoDialect(DefaultDialect):
         query = f"{query} LIKE '{table_name}'"
         try:
             res = connection.execute(sql.text(query))
+            print("has_table " + str(res.first() is not None))
             return res.first() is not None
         except error.TrinoQueryError as e:
+            print("TrinoQueryError " + str(e.error_name))
             if e.error_name in (
                 error.TABLE_NOT_FOUND,
                 error.SCHEMA_NOT_FOUND,
@@ -266,18 +268,24 @@ class TrinoDialect(DefaultDialect):
         """Trino has no support for sequence. Returns False indicate that given sequence does not exists."""
         return False
 
+#   Myntra's change to  reduce version() calls to Trino
     def _get_server_version_info(self, connection: Connection) -> Tuple[int, ...]:
         return tuple([367])
-        query = 'SELECT version()'
-        res = connection.execute(sql.text(query)).scalar()
-        match = self.__version_pattern.match(res)
-        version = int(match.group(1)) if match else 0
-        return tuple([version])
+#         query = 'SELECT version()'
+#         res = connection.execute(sql.text(query)).scalar()
+#         match = self.__version_pattern.match(res)
+#         version = int(match.group(1)) if match else 0
+#         return tuple([version])
 
+#   Myntra's change to fix connection object cast issues
     def _raw_connection(self, connection):
         if isinstance(connection, Engine):
             return connection.raw_connection()
         return connection.connection
+
+#   Myntra's change to disable unicode checks on trino
+    def _check_unicode_returns(self, connection, additional_tests=None):
+        return True
 
     def _get_default_schema_name(self, connection: Connection) -> Optional[str]:
         dbapi_connection: trino_dbapi.Connection = self._raw_connection(connection)
