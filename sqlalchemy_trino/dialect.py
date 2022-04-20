@@ -250,8 +250,9 @@ class TrinoDialect(DefaultDialect):
         query = f"{query} LIKE '{table_name}'"
         try:
             res = connection.execute(sql.text(query))
-            print("has_table " + str(res.first() is not None))
-            return res.first() is not None
+            present = res.first() is not None
+            print("has_table " + str(present))
+            return present
         except error.TrinoQueryError as e:
             print("TrinoQueryError " + str(e.error_name))
             if e.error_name in (
